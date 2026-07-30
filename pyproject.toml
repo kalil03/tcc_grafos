@@ -1,0 +1,20 @@
+[project]
+name = "tcc-grafos"
+version = "0.1.0"
+description = "TCC: Raio de Atuação e Impacto Socioeconômico da UTFPR-CM frente aos Polos de TI do Paraná"
+requires-python = ">=3.10"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.ruff]
+line-length = 100
+src = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

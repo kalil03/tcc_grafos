@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.venv/
+venv/
+build/
+dist/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Dados (grandes / sensíveis, nunca versionar microdados brutos)
+data/raw/*
+data/interim/*
+data/processed/*
+!data/raw/.gitkeep
+!data/interim/.gitkeep
+!data/processed/.gitkeep
+
+# Postgres (volume do docker-compose)
+pgdata/
+
+# Notebooks: manter o notebook, ignorar checkpoints
+.ipynb_checkpoints/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Testes / cobertura
+.pytest_cache/
+.coverage
+htmlcov/
