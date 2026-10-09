@@ -1,8 +1,4 @@
--- schema inicial do banco tcc_grafos
--- códigos de município usam padrão IBGE (7 dígitos), compatível com INEP/CAGED
-
--- distância Haversine é calculada em Python (src/tcc_grafos/graph/metrics.py),
--- então sem dependência de PostGIS aqui
+-- códigos de município no padrão IBGE de 7 dígitos
 
 CREATE TABLE IF NOT EXISTS municipios (
     codigo_ibge     INTEGER PRIMARY KEY,
@@ -26,8 +22,6 @@ CREATE TABLE IF NOT EXISTS ies (
     categoria_administrativa TEXT
 );
 
--- classificação polo/ano calculada em src/tcc_grafos/polos/scoring.py
--- Campo Mourão nunca é agregado com outras IES locais (is_utfpr_cm)
 CREATE TABLE IF NOT EXISTS polos (
     codigo_ibge_municipio INTEGER NOT NULL REFERENCES municipios(codigo_ibge),
     ano_referencia  SMALLINT NOT NULL,
@@ -38,7 +32,6 @@ CREATE TABLE IF NOT EXISTS polos (
     PRIMARY KEY (codigo_ibge_municipio, ano_referencia)
 );
 
--- concluintes de TI (INEP), já agregado por chave (sem microdado individual)
 CREATE TABLE IF NOT EXISTS concluintes_ti (
     id                          BIGSERIAL PRIMARY KEY,
     ano_censo                   SMALLINT NOT NULL,
@@ -53,7 +46,6 @@ CREATE INDEX IF NOT EXISTS idx_concluintes_ano ON concluintes_ti(ano_censo);
 CREATE INDEX IF NOT EXISTS idx_concluintes_origem ON concluintes_ti(codigo_ibge_municipio_nascimento);
 CREATE INDEX IF NOT EXISTS idx_concluintes_destino ON concluintes_ti(codigo_ibge_municipio_curso);
 
--- mercado de trabalho TI (CAGED), agregado por competência/município/CBO
 CREATE TABLE IF NOT EXISTS empregos_ti (
     id                      BIGSERIAL PRIMARY KEY,
     competencia             DATE NOT NULL,
@@ -69,14 +61,13 @@ CREATE TABLE IF NOT EXISTS empregos_ti (
 CREATE INDEX IF NOT EXISTS idx_empregos_competencia ON empregos_ti(competencia);
 CREATE INDEX IF NOT EXISTS idx_empregos_municipio ON empregos_ti(codigo_ibge_municipio);
 
--- série histórica IPCA (deflacionamento salarial)
 CREATE TABLE IF NOT EXISTS ipca_mensal (
     competencia         DATE PRIMARY KEY,
     numero_indice        NUMERIC(14, 6) NOT NULL,
     variacao_mensal_pct  NUMERIC(8, 4)
 );
 
--- grafo direcionado e ponderado município-a-município
+-- grafo direcionado e ponderado município-a-município (origem -> destino)
 CREATE TABLE IF NOT EXISTS grafo_arestas (
     id                              BIGSERIAL PRIMARY KEY,
     ano                             SMALLINT NOT NULL,
@@ -89,7 +80,7 @@ CREATE TABLE IF NOT EXISTS grafo_arestas (
 
 CREATE INDEX IF NOT EXISTS idx_grafo_ano ON grafo_arestas(ano);
 
--- marcadores temporais usados nas linhas verticais do dashboard
+-- marcadores das linhas verticais do dashboard
 CREATE TABLE IF NOT EXISTS eventos_exogenos (
     id           SERIAL PRIMARY KEY,
     nome         TEXT NOT NULL,
@@ -98,7 +89,7 @@ CREATE TABLE IF NOT EXISTS eventos_exogenos (
 );
 
 INSERT INTO eventos_exogenos (nome, ano, descricao) VALUES
-    ('Adoção do SISU pela UTFPR', 2014, 'reflexo esperado nos concluintes a partir de 2017/2018'),
+    ('Adoção do SISU pela UTFPR', 2014, 'reflexo nos concluintes a partir de 2017/2018'),
     ('Pandemia de COVID-19', 2020, 'possível salto no raio de captação'),
     ('Popularização da IA Generativa (ChatGPT)', 2022, 'possível mudança no perfil de ingressantes')
 ON CONFLICT DO NOTHING;

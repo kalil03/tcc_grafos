@@ -1,9 +1,5 @@
-"""Critério multifatorial de classificação dos "grandes polos" de TI.
-
-Escore = soma de z-scores de: concluintes de TI, nº de IES de TI, estoque de
-empregos TI (CAGED), pós-graduação stricto sensu (CAPES). Campo Mourão nunca
-entra no ranking, fica sempre isolado como caso de referência (UTFPR-CM).
-"""
+"""Classificação dos "grandes polos" de TI por escore de z-scores; Campo Mourão
+fica isolado como caso de referência (UTFPR-CM)."""
 
 from __future__ import annotations
 

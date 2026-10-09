@@ -17,27 +17,21 @@ DATA_PROCESSED_DIR = ROOT_DIR / "data" / "processed"
 for _dir in (DATA_RAW_DIR, DATA_INTERIM_DIR, DATA_PROCESSED_DIR):
     _dir.mkdir(parents=True, exist_ok=True)
 
-# só 2015 por enquanto, até o prof passar o resto dos dados
 ANO_INICIO = int(os.getenv("ANO_INICIO", "2015"))
-ANO_FIM = int(os.getenv("ANO_FIM", "2015"))
+ANO_FIM = int(os.getenv("ANO_FIM", "2025"))
 UF_ALVO = os.getenv("UF_ALVO", "PR")
 
-CODIGO_IBGE_CAMPO_MOURAO = 4104808
+# projeto GCP do basedosdados (BigQuery Sandbox, sem faturamento)
+GCP_BILLING_PROJECT_ID = os.getenv("GCP_BILLING_PROJECT_ID", "")
 
-# TODO: conferir códigos Cine no manual do INEP
-CODIGOS_CINE_TI = {
-    "0611": "Ciência da computação",
-    "0612": "Desenvolvimento e análise de software e aplicativos",
-    "0613": "Uso de computadores",
-}
+CODIGO_IBGE_CAMPO_MOURAO = 4104303
 
-# TODO: conferir códigos CBO no manual oficial
-PREFIXOS_CBO_TI = (
-    "2124",
-    "2123",
-    "3171",
-    "3172",
-)
+# prefixos Cine-Brasil da área 061 (Computação e TIC); o id_curso_cine muda de
+# versão por ano, então o filtro é por prefixo
+PREFIXOS_CINE_TI = ("0611", "0612", "0613", "0614", "0615", "0619")
+
+# famílias CBO 2002 de profissionais de TI
+PREFIXOS_CBO_TI = ("2122", "2123", "2124", "3171", "3172")
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
