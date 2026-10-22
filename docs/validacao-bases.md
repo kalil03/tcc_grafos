@@ -31,8 +31,18 @@ Esse dado é **microdado em nível de aluno**, e:
 federais (SISU). MAS a pesquisa aprofundada achou duas saídas que recuperam a
 origem inclusive das privadas/estaduais — **SEDAP/INEP** (microdado identificado,
 acesso protegido) e **Censo 2022/IBGE** (público, nível cidade). Ver a seção
-"Soluções" abaixo. Decisão de qual via seguir é com o André, mas o projeto
-**não está travado**.
+"Soluções" abaixo.
+
+**Decisão final (orientador, out/2026):** o SEDAP foi descartado (a UTFPR não
+tem núcleo próprio e o processo formal arrisca o prazo). O TCC segue 100% com
+dados abertos, em duas camadas:
+
+1. **Capilaridade e raio (H1, H5):** SISU, comparando a UTFPR-CM com as
+   instituições públicas dos grandes polos que aderiram ao SISU (UFPR, UTFPR-CT
+   etc.), um grupo de controle sob a mesma regra de acesso.
+2. **Mercado, densidade e absorção (H2, H3, H4, H6):** concluintes agregados por
+   município (Censo da Educação Superior) + CAGED + população do IBGE, sem
+   precisar da origem individual do aluno.
 
 ### Caminho de resgate: microdados do SISU (validado ✅)
 
