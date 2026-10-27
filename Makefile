@@ -1,4 +1,5 @@
-.PHONY: venv install env db-up db-down db-logs pgadmin psql lint test dashboard
+.PHONY: venv install env db-up db-down db-reset db-logs pgadmin psql lint test \
+	raio mercado carga pipeline dashboard
 
 venv:
 	python3 -m venv .venv
@@ -17,6 +18,11 @@ db-up:
 db-down:
 	docker compose down
 
+# apaga o volume do banco (os dados são recarregados por `make carga`)
+db-reset:
+	docker compose down -v
+	docker compose up -d db
+
 db-logs:
 	docker compose logs -f db
 
@@ -31,6 +37,17 @@ lint:
 
 test:
 	pytest
+
+raio:
+	python -m tcc_grafos.camada_raio
+
+mercado:
+	python -m tcc_grafos.camada_mercado
+
+carga:
+	python -m tcc_grafos.db.load
+
+pipeline: raio mercado carga
 
 dashboard:
 	streamlit run dashboard/app.py

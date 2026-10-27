@@ -1,75 +1,112 @@
 # Raio de Atuação e Impacto Socioeconômico da UTFPR-CM frente aos Polos de TI do Paraná
 
-TCC: uma análise em Teoria dos Grafos comparando a UTFPR Campus Campo Mourão
-(curso de CSTI, concluintes desde 2015) aos grandes polos formadores de TI do
-estado do Paraná, usando microdados públicos do INEP e do CAGED.
+TCC: uma análise em Teoria dos Grafos comparando a UTFPR Campus Campo Mourão aos
+grandes polos formadores de TI do Paraná, só com dados abertos.
 
 ## Cronograma
 
-- **TCC1 (até nov/2026):** pipeline de ETL, definição dos polos, modelagem em
-  grafos, carga no PostgreSQL. Este repositório, por enquanto, é o TCC1.
-- **TCC2 (1º sem/2027):** dashboard Streamlit sobre os dados já tratados, com
-  deploy em nuvem gratuita.
+- **TCC1 (até nov/2026):** pipeline de dados, modelagem em grafos e carga no
+  PostgreSQL.
+- **TCC2 (1º sem/2027):** dashboard Streamlit sobre os dados tratados, com deploy
+  em nuvem gratuita.
 
-## Estrutura do repositório
+## Metodologia em duas camadas
 
-```
-config/                  Parâmetros de configuração adicionais (se necessário)
-data/
-  raw/                   Microdados brutos baixados (não versionado)
-  interim/               Dados intermediários limpos (parquet, não versionado)
-  processed/             Dados finais prontos para carga (não versionado)
-sql/
-  001_schema.sql          Schema das tabelas (municípios, concluintes, empregos, grafo...)
-  002_materialized_views.sql  Views materializadas que o dashboard vai consultar
-src/tcc_grafos/
-  config.py               Parâmetros centrais (recorte de ano/UF/domínio)
-  etl/                     Download e limpeza dos microdados INEP/CAGED + IPCA
-  graph/                   Construção do grafo e métricas (Haversine, centralidade, CAGR)
-  polos/                   Critério multifatorial de classificação dos "grandes polos"
-  db/                      Conexão e carga no PostgreSQL
-dashboard/                 App Streamlit (esqueleto; conteúdo real no TCC2)
-notebooks/                 Exploração ad-hoc
-tests/                     Testes das funções matemáticas puras
-```
+O INEP deixou de publicar o microdado de aluno do Censo da Educação Superior (LGPD),
+então a origem do estudante não vem mais do Censo. O trabalho usa duas camadas,
+detalhadas em [`docs/validacao-bases.md`](docs/validacao-bases.md):
+
+1. **Capilaridade e raio (QP1, QP2, H1, H5):** microdados do SISU. Cada aresta liga
+   o município de residência do aluno matriculado ao município do campus, nos
+   cursos de TI. Compara a UTFPR-CM com as instituições públicas dos polos que
+   aderiram ao SISU.
+2. **Mercado, densidade e absorção (QP3, H2, H3, H4, H6):** concluintes de TI por
+   município (Censo da Educação Superior, agregado), admissões e salários de TI
+   (CAGED, deflacionados pelo IPCA) e população (IBGE).
+
+| Fonte | Onde |
+|---|---|
+| SISU, Censo da Educação Superior, CAGED | Base dos Dados (BigQuery) |
+| IPCA | API do Banco Central (série 433) |
+| População | API do IBGE (estimativas + Censo 2022) |
+| Coordenadas dos municípios | [kelvins/municipios-brasileiros](https://github.com/kelvins/municipios-brasileiros) |
 
 ## Configuração do ambiente
 
-Pré-requisitos: Python 3.10+, Docker (para o PostgreSQL local).
+Pré-requisitos: Python 3.10+, Docker e uma conta Google.
 
 ```bash
 make venv                  # cria o ambiente virtual
 source .venv/bin/activate  # ativa (precisa ser no seu shell)
 make install               # instala as dependências
-make env                   # cria o .env a partir do exemplo (ajuste a senha se quiser)
-make db-up                 # sobe o PostgreSQL; o schema em sql/ roda no primeiro start
+make env                   # cria o .env a partir do exemplo
+make db-up                 # sobe o PostgreSQL
 make test                  # roda os testes
 ```
 
-Outros alvos úteis (`make <alvo>`):
+Acesso ao BigQuery (sem cartão, pelo BigQuery Sandbox):
 
-| Alvo        | O que faz                                      |
-|-------------|------------------------------------------------|
-| `dashboard` | sobe o dashboard Streamlit                     |
-| `db-down`   | derruba o banco                                |
-| `db-logs`   | acompanha os logs do banco                     |
-| `psql`      | abre um psql no banco                          |
-| `pgadmin`   | sobe o pgAdmin em http://localhost:5050        |
-| `lint`      | roda o ruff                                    |
+1. Crie um projeto em [console.cloud.google.com](https://console.cloud.google.com)
+   e abra o BigQuery nele; sem faturamento, o projeto entra em modo Sandbox.
+2. Instale o [gcloud CLI](https://cloud.google.com/sdk/docs/install) e rode
+   `gcloud auth application-default login`.
+3. Coloque o ID do projeto em `GCP_BILLING_PROJECT_ID` no `.env`.
 
-## Definição de "Polo" (resumo)
+## Rodando o pipeline
 
-Os vértices do grafo são **municípios**, não instituições isoladas. Nos
-municípios classificados como "grandes polos" (top-5 por um escore que soma
-concluintes, nº de IES de TI, estoque de empregos CAGED e presença de
-pós-graduação CAPES; ver `src/tcc_grafos/polos/scoring.py`), agregam-se
-**todas** as IES de TI da cidade. Campo Mourão é tratado à parte: o vértice
-representa exclusivamente a UTFPR-CM, nunca agregado com outras IES locais.
-Isso é proposital; a justificativa completa está na seção 4 do projeto de pesquisa.
+```bash
+make pipeline   # = make raio mercado carga
+```
+
+| Alvo | O que faz | Saída |
+|---|---|---|
+| `raio` | camada 1: fluxo SISU, arestas, raio e influenciadores | `data/processed/arestas_sisu_ti.parquet`, `raio_*.csv`, `influenciadores.csv` |
+| `mercado` | camada 2: concluintes, CAGED, IPCA e população | `data/processed/mercado_*.csv` |
+| `carga` | aplica `sql/`, recarrega as tabelas e atualiza as views | PostgreSQL |
+
+As consultas ao BigQuery ficam em cache em `data/interim/`. Para refazê-las, rode a
+camada com `--atualizar` (ex.: `python -m tcc_grafos.camada_raio --atualizar`).
+
+### Dados em outro computador
+
+`data/` não vai pro git. Para não precisar refazer as consultas ao BigQuery (nem
+configurar o GCP), copie estes arquivos para os mesmos caminhos:
+
+```
+data/interim/fluxo_sisu_ti.parquet      cache do SISU
+data/interim/concluintes_ti.parquet     cache do Censo da Educação Superior
+data/interim/caged_ti.parquet           cache do CAGED
+data/raw/ibge/municipios_coordenadas.csv
+data/raw/ibge/populacao_municipios.csv
+```
+
+Com eles, `make pipeline` roda sem GCP (o IPCA vem da API do Banco Central, sem
+login). Os dois arquivos do IBGE são baixados de novo automaticamente se faltarem.
+
+Outros alvos: `dashboard`, `db-down`, `db-reset` (apaga o volume do banco), `db-logs`,
+`psql`, `pgadmin` (http://localhost:5050), `lint`.
+
+## Estrutura
+
+```
+data/                      raw, interim e processed (não versionado)
+docs/                      validação das bases, trabalhos relacionados, referencias.bib
+sql/                       schema e views materializadas
+src/tcc_grafos/
+  config.py                recorte (anos, UF), códigos Cine e CBO de TI
+  camada_raio.py           camada 1
+  camada_mercado.py        camada 2
+  etl/                     extração (basedosdados), IPCA, população, municípios
+  graph/                   arestas e métricas (Haversine, raio, graus, CAGR)
+  polos/                   escore dos grandes polos
+  db/                      conexão e carga no PostgreSQL
+dashboard/                 app Streamlit (esqueleto; conteúdo no TCC2)
+tests/
+```
 
 ## Status
 
-Repositório recém-criado: estrutura, schema e esqueleto do pipeline prontos.
-Os scripts de download (`src/tcc_grafos/etl/download_inep.py` e
-`download_caged.py`) têm URLs marcadas com `TODO`, a preencher assim que os
-links das bases forem recebidos do orientador.
+Pipeline das duas camadas rodando de ponta a ponta e carregando no PostgreSQL.
+Pendências: rodar o escore de polos (`polos/scoring.py`) para substituir a lista
+provisória do config, e as decisões de método registradas em
+[`docs/resultados-preliminares.md`](docs/resultados-preliminares.md).

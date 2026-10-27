@@ -26,12 +26,30 @@ GCP_BILLING_PROJECT_ID = os.getenv("GCP_BILLING_PROJECT_ID", "")
 
 CODIGO_IBGE_CAMPO_MOURAO = 4104303
 
+# Curitiba, Londrina, Maringá, Cascavel, Ponta Grossa; provisório até rodar o
+# escore de polos (polos/scoring.py)
+MUNICIPIOS_POLOS_PROVISORIOS = (4106902, 4113700, 4115200, 4104808, 4119905)
+
 # prefixos Cine-Brasil da área 061 (Computação e TIC); o id_curso_cine muda de
 # versão por ano, então o filtro é por prefixo
 PREFIXOS_CINE_TI = ("0611", "0612", "0613", "0614", "0615", "0619")
 
 # famílias CBO 2002 de profissionais de TI
 PREFIXOS_CBO_TI = ("2122", "2123", "2124", "3171", "3172")
+
+# o SISU não tem código Cine, então o curso de TI é identificado pelo nome
+# (% cobre as letras acentuadas)
+TERMOS_CURSO_TI_SISU = (
+    "COMPUTA",
+    "SISTEMAS DE INFORMA",
+    "SISTEMAS PARA INTERNET",
+    "SOFTWARE",
+    "INFORM%TICA",
+    "REDES DE COMPUTAD",
+    "AN%LISE E DESENV",
+    "CI%NCIA DE DADOS",
+    "TECNOLOGIA DA INFORMA",
+)
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",

@@ -1,4 +1,7 @@
-"""Carga dos DataFrames tratados para as tabelas do PostgreSQL."""
+"""Carga dos resultados do pipeline no PostgreSQL.
+
+Rodar com: python -m tcc_grafos.db.load (depois das camadas 1 e 2)
+"""
 
 from __future__ import annotations
 
@@ -6,34 +9,59 @@ import logging
 
 import pandas as pd
 
+from tcc_grafos.config import DATA_PROCESSED_DIR, ROOT_DIR
 from tcc_grafos.db.engine import get_engine
+from tcc_grafos.etl.municipios import carregar_municipios, tabela_municipios
+from tcc_grafos.etl.populacao import carregar_populacao
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
-def carregar_tabela(df: pd.DataFrame, nome_tabela: str, if_exists: str = "append") -> int:
-    engine = get_engine()
-    linhas = df.to_sql(nome_tabela, engine, if_exists=if_exists, index=False, method="multi")
-    logger.info("carregadas %s linhas em %s", linhas, nome_tabela)
-    return linhas or 0
+SQL_DIR = ROOT_DIR / "sql"
+VIEWS = ("mv_influenciadores", "mv_resumo_mercado")
 
 
-def carregar_municipios(df: pd.DataFrame) -> int:
-    return carregar_tabela(df, "municipios", if_exists="replace")
+def _so_municipios_conhecidos(df: pd.DataFrame, colunas: list[str], codigos: set[int]) -> pd.DataFrame:
+    # código inválido na origem quebraria a chave estrangeira
+    validas = df[colunas].isin(codigos).all(axis=1)
+    if (~validas).any():
+        logger.warning("descartadas %d linhas com município desconhecido", (~validas).sum())
+    return df[validas]
 
 
-def carregar_concluintes_ti(df: pd.DataFrame) -> int:
-    return carregar_tabela(df, "concluintes_ti")
+def montar_tabelas() -> dict[str, pd.DataFrame]:
+    """Tabelas na ordem de carga (respeita as chaves estrangeiras)."""
+    municipios = tabela_municipios(carregar_municipios())
+    codigos = set(municipios["codigo_ibge"])
+
+    arestas = pd.read_parquet(DATA_PROCESSED_DIR / "arestas_sisu_ti.parquet")
+    raio = pd.read_csv(DATA_PROCESSED_DIR / "raio_por_municipio_ano.csv").drop(columns="municipio")
+    mercado = pd.read_csv(DATA_PROCESSED_DIR / "mercado_por_municipio_ano.csv")
+
+    origem_destino = ["codigo_ibge_municipio_origem", "codigo_ibge_municipio_destino"]
+    return {
+        "municipios": municipios,
+        "populacao_municipio": carregar_populacao(),
+        "grafo_arestas": _so_municipios_conhecidos(arestas, origem_destino, codigos),
+        "raio_atuacao": _so_municipios_conhecidos(
+            raio, ["codigo_ibge_municipio_destino"], codigos
+        ),
+        "mercado_ti_anual": _so_municipios_conhecidos(mercado, ["codigo_ibge"], codigos),
+    }
 
 
-def carregar_empregos_ti(df: pd.DataFrame) -> int:
-    return carregar_tabela(df, "empregos_ti")
+def main() -> None:
+    tabelas = montar_tabelas()
+    with get_engine().begin() as conn:
+        for arquivo in sorted(SQL_DIR.glob("*.sql")):
+            conn.exec_driver_sql(arquivo.read_text())
+        conn.exec_driver_sql(f"TRUNCATE {', '.join(tabelas)} CASCADE")
+        for nome, df in tabelas.items():
+            df.to_sql(nome, conn, if_exists="append", index=False, method="multi", chunksize=1000)
+            logger.info("%s: %d linhas", nome, len(df))
+        for view in VIEWS:
+            conn.exec_driver_sql(f"REFRESH MATERIALIZED VIEW {view}")
 
 
-def carregar_grafo_arestas(df: pd.DataFrame) -> int:
-    return carregar_tabela(df, "grafo_arestas")
-
-
-def carregar_polos(df: pd.DataFrame) -> int:
-    return carregar_tabela(df, "polos")
+if __name__ == "__main__":
+    main()

@@ -4,7 +4,14 @@ import math
 
 import pandas as pd
 
-from tcc_grafos.graph.metrics import cagr, calcular_raio_medio_ponderado, distancia_km
+from tcc_grafos.graph.arestas import montar_arestas
+from tcc_grafos.graph.metrics import (
+    cagr,
+    calcular_raio_mediano_ponderado,
+    calcular_raio_medio_ponderado,
+    distancia_km,
+    raio_por_destino,
+)
 
 
 def test_distancia_km_mesmo_ponto_eh_zero():
@@ -41,3 +48,50 @@ def test_raio_medio_ponderado():
 def test_raio_medio_ponderado_vazio_eh_nan():
     vazio = pd.DataFrame(columns=["distancia_km_haversine", "peso_alunos"])
     assert math.isnan(calcular_raio_medio_ponderado(vazio))
+
+
+def test_raio_ignora_aresta_sem_distancia():
+    arestas = pd.DataFrame(
+        {"distancia_km_haversine": [100.0, None], "peso_alunos": [1, 9]}
+    )
+    assert calcular_raio_medio_ponderado(arestas) == 100.0
+
+
+def test_raio_mediano_resiste_a_outlier():
+    arestas = pd.DataFrame(
+        {"distancia_km_haversine": [0.0, 10.0, 1000.0], "peso_alunos": [5, 4, 1]}
+    )
+    assert calcular_raio_mediano_ponderado(arestas) == 0.0
+    assert calcular_raio_medio_ponderado(arestas) == 104.0
+
+
+def test_montar_arestas_soma_ies_e_calcula_distancia():
+    coords = {1: (-24.0, -52.0), 2: (-24.0, -52.0)}
+    fluxo = pd.DataFrame(
+        {
+            "ano": [2020, 2020, 2020],
+            "sigla_ies": ["A", "B", "A"],
+            "origem": ["1", "1", None],
+            "destino": ["2", "2", "2"],
+            "alunos": [3, 2, 7],
+        }
+    )
+    arestas = montar_arestas(fluxo, coords)
+    assert len(arestas) == 1
+    assert arestas["peso_alunos"].iloc[0] == 5
+    assert arestas["distancia_km_haversine"].iloc[0] == 0
+
+
+def test_raio_por_destino_agrupa():
+    arestas = pd.DataFrame(
+        {
+            "codigo_ibge_municipio_destino": [1, 1, 2],
+            "distancia_km_haversine": [100.0, 300.0, 50.0],
+            "peso_alunos": [1, 1, 4],
+        }
+    )
+    r = raio_por_destino(arestas, ["codigo_ibge_municipio_destino"]).set_index(
+        "codigo_ibge_municipio_destino"
+    )
+    assert r.loc[1, "raio_medio_km"] == 200.0
+    assert r.loc[2, "alunos"] == 4

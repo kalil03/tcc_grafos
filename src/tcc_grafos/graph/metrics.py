@@ -11,13 +11,46 @@ def distancia_km(origem: tuple[float, float], destino: tuple[float, float]) -> f
     return haversine(origem, destino, unit=Unit.KILOMETERS)
 
 
+def _com_distancia(arestas: pd.DataFrame) -> pd.DataFrame:
+    # aresta sem distância (município sem coordenada) sai do numerador e do denominador
+    return arestas.dropna(subset=["distancia_km_haversine"])
+
+
 def calcular_raio_medio_ponderado(arestas: pd.DataFrame) -> float:
     """Raio médio ponderado pelo nº de alunos em cada aresta."""
-    if arestas.empty:
+    arestas = _com_distancia(arestas)
+    if arestas.empty or arestas["peso_alunos"].sum() == 0:
         return float("nan")
     return (arestas["distancia_km_haversine"] * arestas["peso_alunos"]).sum() / arestas[
         "peso_alunos"
     ].sum()
+
+
+def calcular_raio_mediano_ponderado(arestas: pd.DataFrame) -> float:
+    """Distância do aluno mediano (menos sensível a poucos alunos vindos de longe)."""
+    arestas = _com_distancia(arestas)
+    if arestas.empty or arestas["peso_alunos"].sum() == 0:
+        return float("nan")
+    ordenado = arestas.sort_values("distancia_km_haversine")
+    acumulado = ordenado["peso_alunos"].cumsum()
+    metade = ordenado["peso_alunos"].sum() / 2
+    return float(ordenado.loc[acumulado >= metade, "distancia_km_haversine"].iloc[0])
+
+
+def raio_por_destino(arestas: pd.DataFrame, chaves: list[str]) -> pd.DataFrame:
+    """Raio médio e mediano por grupo (ex.: município de destino e ano)."""
+    linhas = []
+    for valores, grupo in arestas.groupby(chaves):
+        valores = valores if isinstance(valores, tuple) else (valores,)
+        linhas.append(
+            {
+                **dict(zip(chaves, valores)),
+                "alunos": int(grupo["peso_alunos"].sum()),
+                "raio_medio_km": calcular_raio_medio_ponderado(grupo),
+                "raio_mediano_km": calcular_raio_mediano_ponderado(grupo),
+            }
+        )
+    return pd.DataFrame(linhas)
 
 
 def cagr(valor_inicial: float, valor_final: float, num_periodos: int) -> float:
