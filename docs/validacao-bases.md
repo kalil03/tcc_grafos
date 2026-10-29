@@ -1,5 +1,26 @@
 # Validação das bases de dados
 
+> **Atualização (29/out/2026).** Mudanças depois desta validação:
+>
+> - O Censo da Educação Superior passou a vir dos **microdados do INEP**
+>   (cadastro de cursos e de IES, 2015-2024, em `data/raw/inep/`), não da tabela
+>   agregada da Base dos Dados, que não identifica a IES. Os totais de 2024 batem
+>   com a Base dos Dados.
+> - TI = **área específica Cine 061**. O filtro por prefixo do rótulo perdia a
+>   0616 (Engenharia de Computação) e a 0617 (Ciência de Dados).
+> - SISU: `status_matricula` é o registro da IES no Sisu Gestão. "Pendente" só
+>   aparece entre **não aprovados** (lista de espera); a matrícula que falta está
+>   nos aprovados sem status. No BCC da UTFPR-CM, "Efetivada" cobre 58% dos
+>   ingressantes via ENEM do Censo em 2017-2022.
+> - SISU: o curso de TI é recortado pelo `id_curso` (código INEP) contra a área
+>   061 do Censo. Código que não existe no Censo é erro de registro (o BCC de Campo
+>   Mourão aparece como 1486 em 2018) e cai no filtro por nome.
+> - CAGED: `grau_instrucao` conferido no dicionário (9 superior completo, 10
+>   mestrado, 11 doutorado, 80 pós completa no Novo CAGED). RAIS
+>   (`br_me_rais.microdados_vinculos`) entra para o estoque de empregos do escore.
+>
+> Detalhes e números em `resultados-preliminares.md`.
+
 Checagem feita em out/2026 contra a API de metadados da Base dos Dados (BigQuery)
 e os portais oficiais. Objetivo: confirmar se conseguimos todas as bases, se
 precisam de limpeza e como se cruzam.

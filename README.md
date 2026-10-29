@@ -26,7 +26,9 @@ detalhadas em [`docs/validacao-bases.md`](docs/validacao-bases.md):
 
 | Fonte | Onde |
 |---|---|
-| SISU, Censo da Educação Superior, CAGED | Base dos Dados (BigQuery) |
+| SISU, CAGED, RAIS | Base dos Dados (BigQuery) |
+| Censo da Educação Superior (cadastro de cursos e IES) | microdados do INEP, em `data/raw/inep/` |
+| Programas de pós-graduação | dados abertos da CAPES (programas 2024) |
 | IPCA | API do Banco Central (série 433) |
 | População | API do IBGE (estimativas + Censo 2022) |
 | Coordenadas dos municípios | [kelvins/municipios-brasileiros](https://github.com/kelvins/municipios-brasileiros) |
@@ -55,14 +57,20 @@ Acesso ao BigQuery (sem cartão, pelo BigQuery Sandbox):
 ## Rodando o pipeline
 
 ```bash
-make pipeline   # = make raio mercado carga
+make pipeline   # = make raio mercado polos carga
 ```
 
 | Alvo | O que faz | Saída |
 |---|---|---|
-| `raio` | camada 1: fluxo SISU, arestas, raio e influenciadores | `data/processed/arestas_sisu_ti.parquet`, `raio_*.csv`, `influenciadores.csv` |
-| `mercado` | camada 2: concluintes, CAGED, IPCA e população | `data/processed/mercado_*.csv` |
+| `raio` | camada 1: fluxo SISU, arestas, raio (total, anual, triênio), distribuição por distância, H5 (democratização), cobertura do SISU e influenciadores | `data/processed/arestas_sisu_ti.parquet`, `raio_*.csv`, `distribuicao_distancia_por_ies.csv`, `democratizacao_*.csv`, `cobertura_sisu.csv`, `influenciadores.csv` |
+| `mercado` | camada 2: concluintes (INEP), CAGED, IPCA e população | `data/processed/mercado_*.csv` |
+| `polos` | escore dos grandes polos (INEP, RAIS, CAPES) | `data/processed/polos.csv` |
 | `carga` | aplica `sql/`, recarrega as tabelas e atualiza as views | PostgreSQL |
+| `figuras` | figuras da monografia a partir de `data/processed/` (fora do `pipeline`) | `docs/figuras/*.pdf` e `*.png` |
+
+O Censo da Educação Superior vem dos microdados do INEP em `data/raw/inep/<ano>/`
+(cadastro de cursos e de IES, 2015-2024), não do BigQuery: o agregado da Base dos
+Dados não identifica a IES. O programa de pós da CAPES é baixado sozinho.
 
 As consultas ao BigQuery ficam em cache em `data/interim/`. Para refazê-las, rode a
 camada com `--atualizar` (ex.: `python -m tcc_grafos.camada_raio --atualizar`).
@@ -73,9 +81,11 @@ camada com `--atualizar` (ex.: `python -m tcc_grafos.camada_raio --atualizar`).
 configurar o GCP), copie estes arquivos para os mesmos caminhos:
 
 ```
-data/interim/fluxo_sisu_ti.parquet      cache do SISU
-data/interim/concluintes_ti.parquet     cache do Censo da Educação Superior
+data/interim/fluxo_sisu.parquet         cache do SISU
+data/interim/cursos_ti_inep.parquet     cursos de TI do INEP (sai de data/raw/inep/)
+data/interim/cursos_censo_municipio.parquet  todos os cursos do INEP (curso, município)
 data/interim/caged_ti.parquet           cache do CAGED
+data/interim/rais_ti.parquet            cache da RAIS (escore de polos)
 data/raw/ibge/municipios_coordenadas.csv
 data/raw/ibge/populacao_municipios.csv
 ```
@@ -107,6 +117,6 @@ tests/
 ## Status
 
 Pipeline das duas camadas rodando de ponta a ponta e carregando no PostgreSQL.
-Pendências: rodar o escore de polos (`polos/scoring.py`) para substituir a lista
-provisória do config, e as decisões de método registradas em
+Pendências: atualizar os caches do SISU e do CAGED (`--atualizar`) e rodar o escore
+de polos (`make polos`), que dependem do BigQuery. Decisões e resultados em
 [`docs/resultados-preliminares.md`](docs/resultados-preliminares.md).

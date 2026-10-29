@@ -15,14 +15,17 @@ CREATE TABLE IF NOT EXISTS populacao_municipio (
     PRIMARY KEY (codigo_ibge, ano)
 );
 
+-- escore dos grandes polos no período (critérios da proposta, z-scores somados)
 CREATE TABLE IF NOT EXISTS polos (
-    codigo_ibge_municipio INTEGER NOT NULL REFERENCES municipios(codigo_ibge),
-    ano_referencia  SMALLINT NOT NULL,
-    score           NUMERIC,
-    rank            SMALLINT,
-    is_grande_polo  BOOLEAN NOT NULL DEFAULT FALSE,
-    is_utfpr_cm     BOOLEAN NOT NULL DEFAULT FALSE,
-    PRIMARY KEY (codigo_ibge_municipio, ano_referencia)
+    codigo_ibge_municipio   INTEGER PRIMARY KEY REFERENCES municipios(codigo_ibge),
+    total_concluintes       INTEGER NOT NULL,
+    num_ies_ti              DOUBLE PRECISION NOT NULL,
+    estoque_empregos_ti     DOUBLE PRECISION NOT NULL,
+    tem_pos_graduacao_capes SMALLINT NOT NULL,
+    score                   DOUBLE PRECISION NOT NULL,
+    rank                    SMALLINT,
+    is_grande_polo          BOOLEAN NOT NULL,
+    is_utfpr_cm             BOOLEAN NOT NULL
 );
 
 -- camada 1: matriculados via SISU em cursos de TI, município de origem -> campus
@@ -43,6 +46,8 @@ CREATE TABLE IF NOT EXISTS raio_atuacao (
     alunos                          INTEGER NOT NULL,
     raio_medio_km                   DOUBLE PRECISION,
     raio_mediano_km                 DOUBLE PRECISION,
+    raio_mediano_ic95_inf           DOUBLE PRECISION,
+    raio_mediano_ic95_sup           DOUBLE PRECISION,
     PRIMARY KEY (codigo_ibge_municipio_destino, ano)
 );
 
@@ -53,9 +58,12 @@ CREATE TABLE IF NOT EXISTS mercado_ti_anual (
     populacao                   INTEGER,
     concluintes_total           INTEGER,
     concluintes_presencial      INTEGER,
+    -- todas as IES; difere de concluintes_presencial só em Campo Mourão (lá, só a UTFPR-CM)
+    concluintes_presencial_municipio INTEGER,
     admissoes                   INTEGER NOT NULL,
     desligamentos               INTEGER NOT NULL,
     saldo                       INTEGER NOT NULL,
+    admissoes_jovens_graduados  INTEGER,
     salario_nominal             NUMERIC(12, 2),
     salario_real                NUMERIC(12, 2),
     concl_presencial_por_100k   DOUBLE PRECISION,
@@ -73,6 +81,7 @@ CREATE TABLE IF NOT EXISTS eventos_exogenos (
 
 INSERT INTO eventos_exogenos (ano, nome, descricao) VALUES
     (2014, 'Adoção do SISU pela UTFPR', 'reflexo nos concluintes a partir de 2017/2018'),
-    (2020, 'Pandemia de COVID-19', 'possível salto no raio de captação'),
+    (2020, 'Pandemia de COVID-19', 'ensino remoto; mesmo ano da troca do CAGED pelo Novo CAGED (eSocial)'),
+    (2021, 'Pico de contratações em TI', 'alta das admissões de TI na pandemia, já dentro do Novo CAGED'),
     (2022, 'Popularização da IA Generativa (ChatGPT)', 'possível mudança no perfil de ingressantes')
-ON CONFLICT (ano) DO NOTHING;
+ON CONFLICT (ano) DO UPDATE SET nome = EXCLUDED.nome, descricao = EXCLUDED.descricao;

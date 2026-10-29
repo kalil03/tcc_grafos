@@ -30,26 +30,34 @@ CODIGO_IBGE_CAMPO_MOURAO = 4104303
 # escore de polos (polos/scoring.py)
 MUNICIPIOS_POLOS_PROVISORIOS = (4106902, 4113700, 4115200, 4104808, 4119905)
 
-# prefixos Cine-Brasil da área 061 (Computação e TIC); o id_curso_cine muda de
-# versão por ano, então o filtro é por prefixo
-PREFIXOS_CINE_TI = ("0611", "0612", "0613", "0614", "0615", "0619")
+# no vértice de Campo Mourão entra só o BCC da UTFPR-CM (código do curso no Censo);
+# o CSTI (109550) não tem ingressante desde 2015 e formou os últimos em 2017
+CURSOS_UTFPR_CM = (1164656,)
 
 # famílias CBO 2002 de profissionais de TI
 PREFIXOS_CBO_TI = ("2122", "2123", "2124", "3171", "3172")
 
-# o SISU não tem código Cine, então o curso de TI é identificado pelo nome
-# (% cobre as letras acentuadas)
+# curso de TI pelo nome (regex), só para id_curso do SISU que não existe no Censo
+# (ex.: o BCC de Campo Mourão aparece como 1486 em 2018)
 TERMOS_CURSO_TI_SISU = (
     "COMPUTA",
     "SISTEMAS DE INFORMA",
     "SISTEMAS PARA INTERNET",
     "SOFTWARE",
-    "INFORM%TICA",
+    "INFORM.TICA",
     "REDES DE COMPUTAD",
-    "AN%LISE E DESENV",
-    "CI%NCIA DE DADOS",
+    "AN.LISE E DESENV",
+    "CI.NCIA DE DADOS",
     "TECNOLOGIA DA INFORMA",
 )
+
+# CAGED antigo até aqui; a partir do ano seguinte, Novo CAGED (eSocial), com quebra
+# metodológica entre as duas séries
+ULTIMO_ANO_CAGED_ANTIGO = 2019
+
+# proxy da H2: admissão em TI com superior completo até esta idade conta como
+# recém-formado (o CAGED não identifica o egresso)
+IDADE_MAX_RECEM_FORMADO = 29
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",

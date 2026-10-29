@@ -1,6 +1,6 @@
 """Carga dos resultados do pipeline no PostgreSQL.
 
-Rodar com: python -m tcc_grafos.db.load (depois das camadas 1 e 2)
+Rodar com: python -m tcc_grafos.db.load (depois das camadas e do escore de polos)
 """
 
 from __future__ import annotations
@@ -37,6 +37,8 @@ def montar_tabelas() -> dict[str, pd.DataFrame]:
     arestas = pd.read_parquet(DATA_PROCESSED_DIR / "arestas_sisu_ti.parquet")
     raio = pd.read_csv(DATA_PROCESSED_DIR / "raio_por_municipio_ano.csv").drop(columns="municipio")
     mercado = pd.read_csv(DATA_PROCESSED_DIR / "mercado_por_municipio_ano.csv")
+    polos = pd.read_csv(DATA_PROCESSED_DIR / "polos.csv")
+    polos = polos[[c for c in polos.columns if c != "municipio" and not c.startswith("z_")]]
 
     origem_destino = ["codigo_ibge_municipio_origem", "codigo_ibge_municipio_destino"]
     return {
@@ -47,6 +49,7 @@ def montar_tabelas() -> dict[str, pd.DataFrame]:
             raio, ["codigo_ibge_municipio_destino"], codigos
         ),
         "mercado_ti_anual": _so_municipios_conhecidos(mercado, ["codigo_ibge"], codigos),
+        "polos": polos,
     }
 
 

@@ -13,6 +13,9 @@ psycopg2-binary>=2.9
 networkx>=3.2
 haversine>=2.8
 
+# figuras da monografia (PDF)
+matplotlib>=3.8
+
 # (TCC2)
 streamlit>=1.38
 plotly>=5.22
